@@ -7,11 +7,98 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Lead {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  phone     String
-  notes     String?
+model User {
+  id        String   @id @default(uuid())
+  email     String?  @unique
+  name      String?
+  role      String   @default("user")
+  buyers    Buyer[]  @relation("OwnerBuyers")
   createdAt DateTime @default(now())
+}
+
+model Buyer {
+  id           String   @id @default(uuid())
+  fullName     String
+  email        String?
+  phone        String
+  city         City
+  propertyType PropertyType
+  bhk          BHK?
+  purpose      Purpose
+  budgetMin    Int?
+  budgetMax    Int?
+  timeline     Timeline
+  source       Source
+  status       Status   @default(New)
+  notes        String?  
+  tags         Json
+  ownerId      String
+  updatedAt    DateTime @updatedAt
+  BuyerHistory BuyerHistory[]
+
+  User User[] @relation("OwnerBuyers")
+}
+
+model BuyerHistory {
+  id        String   @id @default(uuid())
+  buyerId   String
+  buyer     Buyer    @relation(fields: [buyerId], references: [id])
+  changedBy String?
+  changedAt DateTime @default(now())
+  diff      Json
+}
+
+enum City {
+  Chandigarh
+  Mohali
+  Zirakpur
+  Panchkula
+  Other
+}
+
+enum PropertyType {
+  Apartment
+  Villa
+  Plot
+  Office
+  Retail
+}
+
+enum BHK {
+  ONE
+  TWO
+  THREE
+  FOUR
+  STUDIO
+}
+
+enum Purpose {
+  Buy
+  Rent
+}
+
+// Timeline of buyer's property plan
+enum Timeline {
+  ZERO_TO_3M
+  THREE_TO_6M
+  GT_6M
+  EXPLORING
+}
+
+enum Source {
+  Website
+  Referral
+  WALK_IN
+  Call
+  Other
+}
+
+enum Status {
+  New
+  Qualified
+  Contacted
+  Visited
+  Negotiation
+  Converted
+  Dropped
 }
