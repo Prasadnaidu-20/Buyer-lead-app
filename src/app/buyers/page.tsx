@@ -20,6 +20,10 @@ import {
   Mail,
   Activity,
   SlidersHorizontal,
+  Upload,
+  Download,
+  FileText,
+  X,
 } from "lucide-react";
 
 // Constants
@@ -36,6 +40,13 @@ export default function BuyersPage() {
   const [page, setPage] = useState(Number(searchParams.get("page") || 1));
   const [searchInput, setSearchInput] = useState(searchParams.get("search") || "");
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
+
+  // Import/Export state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<any>(null);
+  const [exporting, setExporting] = useState(false);
 
   // filters state
   const [city, setCity] = useState(searchParams.get("city") || "");
@@ -126,6 +137,95 @@ export default function BuyersPage() {
     }
   };
 
+  // Import/Export functions
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImportFile(file);
+      setImportResult(null);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importFile) return;
+
+    try {
+      setImporting(true);
+      setImportResult(null);
+
+      const formData = new FormData();
+      formData.append('file', importFile);
+
+      const res = await fetch('/api/buyers/import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await res.json();
+      setImportResult(result);
+
+      if (result.success) {
+        // Refresh the buyers list
+        fetchBuyers();
+        // Close modal after success
+        setTimeout(() => {
+          setShowImportModal(false);
+          setImportFile(null);
+          setImportResult(null);
+        }, 2000);
+      }
+    } catch (err) {
+      setImportResult({
+        success: false,
+        error: err instanceof Error ? err.message : "Import failed"
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+
+      // Build query params with current filters
+      const params = new URLSearchParams();
+      if (city) params.set("city", city);
+      if (status) params.set("status", status);
+      if (propertyType) params.set("propertyType", propertyType);
+      if (timeline) params.set("timeline", timeline);
+      if (searchQuery) params.set("search", searchQuery);
+
+      const res = await fetch(`/api/buyers/export?${params.toString()}`);
+      
+      if (!res.ok) {
+        throw new Error('Export failed');
+      }
+
+      // Download the file
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      // Get filename from Content-Disposition header
+      const contentDisposition = res.headers.get('Content-Disposition');
+      const filename = contentDisposition 
+        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
+        : `buyers-export-${new Date().toISOString().split('T')[0]}.csv`;
+      
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // Pagination handler
   const handlePageChange = (newPage: number) => {
     // Update URL params - let URL sync useEffect handle state updates
@@ -207,7 +307,22 @@ useEffect(() => {
               <p className="text-gray-400 mt-1">{total} total leads found</p>
             </div>
           </div>
-          <div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
+            >
+              <Upload className="w-4 h-4" />
+              Import CSV
+            </button>
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors duration-200"
+            >
+              <Download className="w-4 h-4" />
+              {exporting ? "Exporting..." : "Export CSV"}
+            </button>
             <Link
             href="/buyers/new"
             className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
@@ -220,7 +335,7 @@ useEffect(() => {
               localStorage.removeItem("user");
               router.push("/login");
             }}
-          className="ml-7 inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5">
+          className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5">
             Logout
           </button>
           </div>
@@ -582,6 +697,150 @@ useEffect(() => {
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Import Modal */}
+        {showImportModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-200 flex items-center gap-2">
+                    <Upload className="w-6 h-6 text-blue-400" />
+                    Import CSV
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowImportModal(false);
+                      setImportFile(null);
+                      setImportResult(null);
+                    }}
+                    className="p-2 hover:bg-gray-700 rounded-lg transition-colors duration-200 text-gray-400 hover:text-white"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {/* CSV Format Info */}
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                    <h3 className="text-blue-400 font-semibold mb-2">CSV Format Requirements</h3>
+                    <div className="text-sm text-gray-300 space-y-1">
+                      <p>• Maximum 200 rows (excluding header)</p>
+                      <p>• Required headers: fullName, email, phone, city, propertyType, bhk, purpose, budgetMin, budgetMax, timeline, source, notes, tags, status</p>
+                      <p>• Valid enums: city (Chandigarh, Mohali, etc.), propertyType (Apartment, Villa, etc.), status (New, Qualified, etc.)</p>
+                      <p>• Tags should be comma-separated</p>
+                    </div>
+                  </div>
+
+                  {/* File Upload */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-300 mb-3">
+                      Select CSV File
+                    </label>
+                    <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-gray-500 transition-colors duration-200">
+                      <input
+                        type="file"
+                        accept=".csv"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        id="csv-upload"
+                      />
+                      <label
+                        htmlFor="csv-upload"
+                        className="cursor-pointer flex flex-col items-center gap-3"
+                      >
+                        <FileText className="w-12 h-12 text-gray-400" />
+                        <div>
+                          <p className="text-gray-300 font-medium">
+                            {importFile ? importFile.name : "Click to select CSV file"}
+                          </p>
+                          <p className="text-gray-400 text-sm">Maximum 5MB</p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Import Results */}
+                  {importResult && (
+                    <div className={`rounded-lg p-4 ${
+                      importResult.success 
+                        ? 'bg-green-500/10 border border-green-500/20' 
+                        : 'bg-red-500/10 border border-red-500/20'
+                    }`}>
+                      <h3 className={`font-semibold mb-2 ${
+                        importResult.success ? 'text-green-400' : 'text-red-400'
+                      }`}>
+                        {importResult.success ? 'Import Successful!' : 'Import Failed'}
+                      </h3>
+                      
+                      {importResult.success ? (
+                        <div className="text-sm text-gray-300 space-y-1">
+                          <p>• Total rows: {importResult.totalRows}</p>
+                          <p>• Valid rows: {importResult.validRows}</p>
+                          <p>• Inserted: {importResult.insertedCount}</p>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-300">
+                          {importResult.error && (
+                            <p className="mb-2">{importResult.error}</p>
+                          )}
+                          {importResult.errors && importResult.errors.length > 0 && (
+                            <div className="max-h-40 overflow-y-auto">
+                              <p className="font-medium mb-2">Validation Errors:</p>
+                              <div className="space-y-1">
+                                {importResult.errors.slice(0, 10).map((error: any, index: number) => (
+                                  <p key={index} className="text-xs">
+                                    Row {error.row}: {error.message}
+                                  </p>
+                                ))}
+                                {importResult.errors.length > 10 && (
+                                  <p className="text-xs text-gray-400">
+                                    ... and {importResult.errors.length - 10} more errors
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-3">
+                    <button
+                      onClick={() => {
+                        setShowImportModal(false);
+                        setImportFile(null);
+                        setImportResult(null);
+                      }}
+                      className="px-4 py-2 border border-gray-600 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleImport}
+                      disabled={!importFile || importing}
+                      className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors duration-200"
+                    >
+                      {importing ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Importing...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4" />
+                          Import
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
