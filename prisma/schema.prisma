@@ -79,9 +79,9 @@ enum Purpose {
 
 // Timeline of buyer's property plan
 enum Timeline {
-  ZERO_TO_3MONTHS
-  THREE_TO_6MONTHS
-  GT_6MONTHS
+  ZERO_TO_3M
+  THREE_TO_6M
+  GT_6M
   EXPLORING
 }
 
