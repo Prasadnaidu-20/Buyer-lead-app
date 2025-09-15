@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { User, Mail, Phone, MapPin, Building, Home, Target, Calendar, Users, FileText, Tag, DollarSign, CheckCircle, AlertCircle } from "lucide-react";
-
+import { User, Mail, Phone, ArrowLeft, MapPin, Building, Home, Target, Calendar, Users, FileText, Tag, DollarSign, CheckCircle, AlertCircle } from "lucide-react";
+import Link from "next/link";
 // ✅ Match enums with Prisma schema
 enum City {
   Chandigarh = "Chandigarh",
@@ -166,9 +166,16 @@ export default function CreateBuyerPage() {
       <div className="max-w-4xl mx-auto">
         {/* Header Section */}
         <div className="text-center mb-10">
+        <Link
+              href="/buyers"
+              className="p-2 hover:bg-gray-700/50 rounded-lg transition-colors duration-200 text-gray-400 hover:text-white"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl mb-6 shadow-2xl">
             <Users className="w-8 h-8 text-white" />
           </div>
+          
           <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent mb-3">
             Create New Buyer Lead
           </h1>

@@ -85,18 +85,41 @@ export async function PUT(
       }
     });
 
-    // Create history entry
-    await prisma.buyerHistory.create({
-      data: {
-        buyerId: buyerId,
-        changedBy: "user-id-123", // replace with real logged-in user
-        diff: {
-          action: "UPDATED",
-          oldValues: currentBuyer,
-          newValues: updatedBuyer,
-        },
-      },
+    // Calculate field-level changes
+    const changes: Record<string, { old: any; new: any }> = {};
+    const fieldsToTrack = [
+      'fullName', 'email', 'phone', 'city', 'propertyType', 'bhk', 
+      'purpose', 'budgetMin', 'budgetMax', 'timeline', 'source', 
+      'status', 'notes', 'tags'
+    ];
+
+    fieldsToTrack.forEach(field => {
+      const oldValue = currentBuyer[field as keyof typeof currentBuyer];
+      const newValue = updatedBuyer[field as keyof typeof updatedBuyer];
+      
+      // Only track if value actually changed
+      if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+        changes[field] = {
+          old: oldValue,
+          new: newValue
+        };
+      }
     });
+
+    // Only create history entry if there are actual changes
+    if (Object.keys(changes).length > 0) {
+      await prisma.buyerHistory.create({
+        data: {
+          buyerId: buyerId,
+          changedBy: "user-id-123", // replace with real logged-in user
+          diff: {
+            action: "UPDATED",
+            changes: changes,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+    }
 
     return NextResponse.json(updatedBuyer);
   } catch (err: any) {
