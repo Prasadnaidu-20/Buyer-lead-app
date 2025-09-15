@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/prisma";
+import { buyerSchema } from "../../../../../lib/validators/buyer";
+import { withRateLimit, rateLimiters } from "@/lib/rate-limit";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const buyerId = params.id;
+    const { id: buyerId } = await params;
 
     if (!buyerId) {
       return NextResponse.json({ error: "Buyer ID is required" }, { status: 400 });
@@ -43,17 +45,20 @@ export async function GET(
   }
 }
 
-export async function PUT(
+async function updateBuyer(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const buyerId = params.id;
+    const { id: buyerId } = await params;
     const body = await req.json();
 
     if (!buyerId) {
       return NextResponse.json({ error: "Buyer ID is required" }, { status: 400 });
     }
+
+    // Validate input
+    const parsed = buyerSchema.parse(body);
 
     // Get current buyer data for history
     const currentBuyer = await prisma.buyer.findUnique({
@@ -68,20 +73,20 @@ export async function PUT(
     const updatedBuyer = await prisma.buyer.update({
       where: { id: buyerId },
       data: {
-        fullName: body.fullName,
-        email: body.email ?? null,
-        phone: body.phone,
-        city: body.city,
-        propertyType: body.propertyType,
-        bhk: body.bhk ?? null,
-        purpose: body.purpose,
-        budgetMin: body.budgetMin ?? null,
-        budgetMax: body.budgetMax ?? null,
-        timeline: body.timeline,
-        source: body.source,
-        status: body.status ?? currentBuyer.status,
-        notes: body.notes ?? null,
-        tags: body.tags ?? [],
+        fullName: parsed.fullName,
+        email: parsed.email ?? null,
+        phone: parsed.phone,
+        city: parsed.city,
+        propertyType: parsed.propertyType,
+        bhk: parsed.bhk ?? null,
+        purpose: parsed.purpose,
+        budgetMin: parsed.budgetMin ?? null,
+        budgetMax: parsed.budgetMax ?? null,
+        timeline: parsed.timeline,
+        source: parsed.source,
+        status: parsed.status ?? currentBuyer.status,
+        notes: parsed.notes ?? null,
+        tags: parsed.tags ?? [],
       }
     });
 
@@ -125,6 +130,10 @@ export async function PUT(
   } catch (err: any) {
     console.error("Error in PUT /api/buyers/[id]:", err);
     
+    if (err.name === 'ZodError') {
+      return NextResponse.json({ error: "Validation error", details: err.errors }, { status: 400 });
+    }
+    
     // Handle specific Prisma errors
     if (err.code === 'P2025') {
       return NextResponse.json({ error: "Buyer not found" }, { status: 404 });
@@ -137,12 +146,15 @@ export async function PUT(
   }
 }
 
+// Apply rate limiting to buyer updates (50 per hour)
+export const PUT = withRateLimit(rateLimiters.buyerUpdate)(updateBuyer);
+
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const buyerId = params.id;
+    const { id: buyerId } = await params;
 
     if (!buyerId) {
       return NextResponse.json({ error: "Buyer ID is required" }, { status: 400 });

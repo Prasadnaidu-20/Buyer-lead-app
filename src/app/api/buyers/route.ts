@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { buyerSchema } from "../../../../lib/validators/buyer";
+import { withRateLimit, rateLimiters } from "@/lib/rate-limit";
 
-export async function POST(req: Request) {
+async function createBuyer(req: Request) {
   try {
     const body = await req.json();
 
@@ -43,9 +44,22 @@ export async function POST(req: Request) {
 
     return NextResponse.json(buyer, { status: 201 });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 400 });
+    console.error("Error in POST /api/buyers:", err);
+    if (err.code === 'P2002') {
+      return NextResponse.json({ error: "Buyer with this phone number already exists" }, { status: 409 });
+    }
+    if (err.name === 'ZodError') {
+      return NextResponse.json({ error: "Validation error", details: err.errors }, { status: 400 });
+    }
+    return NextResponse.json({
+      error: "Internal server error",
+      message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    }, { status: 500 });
   }
 }
+
+// Apply rate limiting to buyer creation (10 per hour)
+export const POST = withRateLimit(rateLimiters.buyerCreate)(createBuyer);
 
 
 
