@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, memo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -29,11 +29,138 @@ import {
 // Constants
 const PAGE_SIZE = 10;
 
+// Memoized BuyerRow component to prevent unnecessary re-renders
+const BuyerRow = memo(({ 
+  buyer, 
+  updatingStatus, 
+  handleStatusUpdate, 
+  getStatusColor, 
+  getBudgetLabel, 
+  getTimelineLabel 
+}: {
+  buyer: any;
+  updatingStatus: Set<string>;
+  handleStatusUpdate: (buyerId: string, newStatus: string) => void;
+  getStatusColor: (status: string) => string;
+  getBudgetLabel: (min: number | null, max: number | null) => string;
+  getTimelineLabel: (timeline: string) => string;
+}) => (
+  <tr className="hover:bg-gray-700/30 transition-colors duration-200">
+    <td className="px-6 py-4">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-center text-white font-semibold text-sm">
+          {buyer.fullName?.charAt(0)?.toUpperCase()}
+        </div>
+        <div>
+          <div className="font-medium text-gray-200">
+            {buyer.fullName}
+          </div>
+          {buyer.email && (
+            <div className="text-sm text-gray-400 flex items-center gap-1">
+              <Mail className="w-3 h-3" />
+              {buyer.email}
+            </div>
+          )}
+        </div>
+      </div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="text-gray-200 flex items-center gap-2">
+        <Phone className="w-4 h-4 text-gray-400" />
+        {buyer.phone}
+      </div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="flex items-center gap-2 text-gray-300">
+        <MapPin className="w-4 h-4 text-gray-400" />
+        {buyer.city}
+      </div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="flex items-center gap-2 text-gray-300">
+        <Building className="w-4 h-4 text-gray-400" />
+        {buyer.propertyType}
+        {buyer.bhk && (
+          <span className="text-sm text-gray-500">
+            • {buyer.bhk}
+          </span>
+        )}
+      </div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="flex items-center gap-2 text-gray-300">
+        <DollarSign className="w-4 h-4 text-gray-400" />
+        <span className="text-sm">
+          {getBudgetLabel(buyer.budgetMin, buyer.budgetMax)}
+        </span>
+      </div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="flex items-center gap-2 text-gray-300">
+        <Calendar className="w-4 h-4 text-gray-400" />
+        <span className="text-sm">
+          {getTimelineLabel(buyer.timeline)}
+        </span>
+      </div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="relative">
+        <select
+          value={buyer.status || "New"}
+          onChange={(e) => handleStatusUpdate(buyer.id, e.target.value)}
+          disabled={updatingStatus.has(buyer.id)}
+          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border transition-colors duration-200 ${
+            updatingStatus.has(buyer.id) 
+              ? 'bg-gray-600/20 text-gray-500 border-gray-600/30 cursor-not-allowed' 
+              : getStatusColor(buyer.status) + ' hover:bg-opacity-80 cursor-pointer'
+          }`}
+        >
+          <option value="New">New</option>
+          <option value="Qualified">Qualified</option>
+          <option value="Contacted">Contacted</option>
+          <option value="Visited">Visited</option>
+          <option value="Negotiation">Negotiation</option>
+          <option value="Converted">Converted</option>
+          <option value="Dropped">Dropped</option>
+        </select>
+        {updatingStatus.has(buyer.id) && (
+          <div className="absolute -top-1 -right-1 w-3 h-3">
+            <div className="animate-spin rounded-full h-3 w-3 border-b border-amber-500"></div>
+          </div>
+        )}
+      </div>
+    </td>
+    <td className="px-6 py-4 text-sm text-gray-400">
+      {new Date(buyer.updatedAt).toLocaleDateString()}
+    </td>
+    <td className="px-6 py-4">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => window.location.href = `/buyers/${buyer.id}`}
+          className="p-2 hover:bg-gray-700/50 rounded-lg transition-colors duration-200 text-gray-400 hover:text-amber-400"
+          title="View Details"
+        >
+          <Eye className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => window.location.href = `/buyers/${buyer.id}/edit`}
+          className="p-2 hover:bg-gray-700/50 rounded-lg transition-colors duration-200 text-gray-400 hover:text-orange-400"
+          title="Edit Lead"
+        >
+          <Edit3 className="w-4 h-4" />
+        </button>
+      </div>
+    </td>
+  </tr>
+));
+
+BuyerRow.displayName = 'BuyerRow';
+
 export default function BuyersPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [buyers, setBuyers] = useState([]);
+  const [buyers, setBuyers] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +187,7 @@ export default function BuyersPage() {
   const [timeline, setTimeline] = useState(searchParams.get("timeline") || "");
   const [showFilters, setShowFilters] = useState(false);
 
-  const fetchBuyers = async () => {
+  const fetchBuyers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -91,12 +218,12 @@ export default function BuyersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, city, status, propertyType, timeline, searchQuery]);
 
   // fetch on filters/search/page change
   useEffect(() => {
     fetchBuyers();
-  }, [page, city, status, propertyType, timeline, searchQuery]);
+  }, [fetchBuyers]);
 
   // search function triggered on Enter key
   const handleSearch = () => {
@@ -229,8 +356,8 @@ export default function BuyersPage() {
     }
   };
 
-  // Status update handler
-  const handleStatusUpdate = async (buyerId: string, newStatus: string) => {
+  // Status update handler - optimized to avoid full page refresh
+  const handleStatusUpdate = useCallback(async (buyerId: string, newStatus: string) => {
     try {
       // Add buyer to updating set
       setUpdatingStatus(prev => new Set(prev).add(buyerId));
@@ -247,8 +374,14 @@ export default function BuyersPage() {
         throw new Error('Failed to update status');
       }
 
-      // Refresh the buyers list to show updated data
-      await fetchBuyers();
+      // Update the buyer in the local state instead of refetching all data
+      setBuyers(prevBuyers => 
+        prevBuyers.map(buyer => 
+          buyer.id === buyerId 
+            ? { ...buyer, status: newStatus, updatedAt: new Date().toISOString() }
+            : buyer
+        )
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update status");
     } finally {
@@ -259,7 +392,7 @@ export default function BuyersPage() {
         return newSet;
       });
     }
-  };
+  }, []);
 
   // Pagination handler
   const handlePageChange = (newPage: number) => {
@@ -294,27 +427,37 @@ useEffect(() => {
 
 
 
-  const formatBudget = (min: number | null, max: number | null) => {
+  const formatBudget = useCallback((min: number | null, max: number | null) => {
     if (!min && !max) return "Not specified";
     if (!min) return `Up to ₹${(max! / 100000).toFixed(1)}L`;
     if (!max) return `From ₹${(min / 100000).toFixed(1)}L`;
     return `₹${(min / 100000).toFixed(1)}L - ₹${(max / 100000).toFixed(1)}L`;
-  };
+  }, []);
 
-  const getStatusColor = (status: string) => {
+  const getBudgetLabel = formatBudget; // Alias for the memoized component
+
+  const getStatusColor = useCallback((status: string) => {
     switch (status?.toLowerCase()) {
-      case "active":
-        return "bg-green-500/20 text-green-400 border-green-500/30";
-      case "closed":
-        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
-      case "follow_up":
-        return "bg-amber-500/20 text-amber-400 border-amber-500/30";
-      default:
+      case "new":
         return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+      case "qualified":
+        return "bg-green-500/20 text-green-400 border-green-500/30";
+      case "contacted":
+        return "bg-amber-500/20 text-amber-400 border-amber-500/30";
+      case "visited":
+        return "bg-purple-500/20 text-purple-400 border-purple-500/30";
+      case "negotiation":
+        return "bg-orange-500/20 text-orange-400 border-orange-500/30";
+      case "converted":
+        return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+      case "dropped":
+        return "bg-red-500/20 text-red-400 border-red-500/30";
+      default:
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
     }
-  };
+  }, []);
 
-  const getTimelineLabel = (timeline: string) => {
+  const getTimelineLabel = useCallback((timeline: string) => {
     const labels: Record<string, string> = {
       ZERO_TO_3M: "0-3 Months",
       THREE_TO_6M: "3-6 Months",
@@ -322,7 +465,7 @@ useEffect(() => {
       EXPLORING: "Just Exploring",
     };
     return labels[timeline] || timeline;
-  };
+  }, []);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -558,118 +701,17 @@ useEffect(() => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700/50">
-                  {buyers && buyers.map((b: any) =>(
-                    <tr
+                  {buyers && buyers.map((b: any) => (
+                    <BuyerRow
                       key={b.id}
-                      className="hover:bg-gray-700/30 transition-colors duration-200"
-                    >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-center text-white font-semibold text-sm">
-                          {b.fullName?.charAt(0)?.toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-200">
-                            {b.fullName}
-                          </div>
-                          {b.email && (
-                            <div className="text-sm text-gray-400 flex items-center gap-1">
-                              <Mail className="w-3 h-3" />
-                              {b.email}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-gray-200 flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-gray-400" />
-                        {b.phone}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-gray-300">
-                        <MapPin className="w-4 h-4 text-gray-400" />
-                        {b.city}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-gray-300">
-                        <Building className="w-4 h-4 text-gray-400" />
-                        {b.propertyType}
-                        {b.bhk && (
-                          <span className="text-sm text-gray-500">
-                            • {b.bhk}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-gray-300">
-                        <DollarSign className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm">
-                          {formatBudget(b.budgetMin, b.budgetMax)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-gray-300">
-                        <Calendar className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm">
-                          {getTimelineLabel(b.timeline)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="relative">
-                        <select
-                          value={b.status || "New"}
-                          onChange={(e) => handleStatusUpdate(b.id, e.target.value)}
-                          disabled={updatingStatus.has(b.id)}
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border transition-colors duration-200 ${
-                            updatingStatus.has(b.id) 
-                              ? 'bg-gray-600/20 text-gray-500 border-gray-600/30 cursor-not-allowed' 
-                              : getStatusColor(b.status) + ' hover:bg-opacity-80 cursor-pointer'
-                          }`}
-                        >
-                          <option value="New">New</option>
-                          <option value="Qualified">Qualified</option>
-                          <option value="Contacted">Contacted</option>
-                          <option value="Visited">Visited</option>
-                          <option value="Negotiation">Negotiation</option>
-                          <option value="Converted">Converted</option>
-                          <option value="Dropped">Dropped</option>
-                        </select>
-                        {updatingStatus.has(b.id) && (
-                          <div className="absolute -top-1 -right-1 w-3 h-3">
-                            <div className="animate-spin rounded-full h-3 w-3 border-b border-amber-500"></div>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-400">
-                      {new Date(b.updatedAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => router.push(`/buyers/${b.id}`)}
-                          className="p-2 hover:bg-gray-700/50 rounded-lg transition-colors duration-200 text-gray-400 hover:text-amber-400"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => router.push(`/buyers/${b.id}/edit`)}
-                          className="p-2 hover:bg-gray-700/50 rounded-lg transition-colors duration-200 text-gray-400 hover:text-orange-400"
-                          title="Edit Lead"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      buyer={b}
+                      updatingStatus={updatingStatus}
+                      handleStatusUpdate={handleStatusUpdate}
+                      getStatusColor={getStatusColor}
+                      getBudgetLabel={getBudgetLabel}
+                      getTimelineLabel={getTimelineLabel}
+                    />
+                  ))}
                 </tbody>
               </table>
             </div>

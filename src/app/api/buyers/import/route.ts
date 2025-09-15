@@ -31,7 +31,7 @@ interface CSVRow {
   status: string;
 }
 
-export async function POST(req: Request) {
+async function importCSV(req: Request) {
   try {
     const formData = await req.formData();
     const file = formData.get('file') as File;
@@ -83,21 +83,13 @@ export async function POST(req: Request) {
     const errors: Array<{ row: number; message: string }> = [];
     const validData: any[] = [];
 
+    // Process each row (skip header)
     for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-
       try {
-        // Simple CSV parsing (handles quoted fields)
+        const line = lines[i];
+        if (!line || line.trim() === '') continue;
+
         const values = parseCSVLine(line);
-        
-        if (!values || values.length === 0) {
-          errors.push({
-            row: i + 1,
-            message: 'Empty row or parsing failed'
-          });
-          continue;
-        }
         
         if (values.length !== expectedHeaders.length) {
           errors.push({
@@ -157,40 +149,27 @@ export async function POST(req: Request) {
       } as ImportResult);
     }
 
-    // Insert valid rows in a transaction
-    let insertedCount = 0;
+    // Insert valid data in a transaction
     try {
+      let insertedCount = 0;
+      
       await prisma.$transaction(async (tx) => {
         for (const data of validData) {
-          // Insert buyer
           const buyer = await tx.buyer.create({
             data: {
-              fullName: data.fullName,
-              email: data.email || null,
-              phone: data.phone,
-              city: data.city,
-              propertyType: data.propertyType,
-              bhk: data.bhk || null,
-              purpose: data.purpose,
-              budgetMin: data.budgetMin || null,
-              budgetMax: data.budgetMax || null,
-              timeline: data.timeline,
-              source: data.source,
-              status: data.status || "New",
-              notes: data.notes || null,
-              tags: data.tags || [],
+              ...data,
               ownerId: "user-id-123", // replace with real logged-in user
-            }
+            },
           });
 
-          // Create history entry
+          // Create history entry for imported buyer
           await tx.buyerHistory.create({
             data: {
               buyerId: buyer.id,
-              changedBy: "user-id-123", // mock user for now
+              changedBy: "user-id-123", // replace with real logged-in user
               diff: {
                 action: "IMPORTED",
-                newValues: data,
+                timestamp: new Date().toISOString(),
               },
             },
           });
@@ -223,6 +202,8 @@ export async function POST(req: Request) {
     }, { status: 500 });
   }
 }
+
+export const POST = importCSV;
 
 // Helper function to parse CSV line (handles quoted fields)
 function parseCSVLine(line: string): string[] {
@@ -313,15 +294,11 @@ function transformCSVRow(row: CSVRow): { success: boolean; data?: any; error?: s
     return { success: true, data: validatedData };
   } catch (err: any) {
     if (err instanceof z.ZodError) {
-      const firstError = err.errors[0];
-      return { 
-        success: false, 
-        error: `${firstError.path.join('.')}: ${firstError.message}` 
-      };
+      const firstError = err.issues?.[0];
+      if (firstError) {
+        return { success: false, error: `${firstError.path.join('.')}: ${firstError.message}` };
+      }
     }
-    return { 
-      success: false, 
-      error: err instanceof Error ? err.message : 'Validation failed' 
-    };
+    return { success: false, error: err instanceof Error ? err.message : 'Validation failed' };
   }
 }
