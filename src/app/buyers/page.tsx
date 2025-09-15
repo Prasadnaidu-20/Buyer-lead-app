@@ -47,6 +47,9 @@ export default function BuyersPage() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
   const [exporting, setExporting] = useState(false);
+  
+  // Status update state
+  const [updatingStatus, setUpdatingStatus] = useState<Set<string>>(new Set());
 
   // filters state
   const [city, setCity] = useState(searchParams.get("city") || "");
@@ -223,6 +226,38 @@ export default function BuyersPage() {
       setError(err instanceof Error ? err.message : "Export failed");
     } finally {
       setExporting(false);
+    }
+  };
+
+  // Status update handler
+  const handleStatusUpdate = async (buyerId: string, newStatus: string) => {
+    try {
+      // Add buyer to updating set
+      setUpdatingStatus(prev => new Set(prev).add(buyerId));
+      
+      const res = await fetch(`/api/buyers/${buyerId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update status');
+      }
+
+      // Refresh the buyers list to show updated data
+      await fetchBuyers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update status");
+    } finally {
+      // Remove buyer from updating set
+      setUpdatingStatus(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(buyerId);
+        return newSet;
+      });
     }
   };
 
@@ -525,7 +560,7 @@ useEffect(() => {
                 <tbody className="divide-y divide-gray-700/50">
                   {buyers && buyers.map((b: any) =>(
                     <tr
-                      key={b.fullName}
+                      key={b.id}
                       className="hover:bg-gray-700/30 transition-colors duration-200"
                     >
                     <td className="px-6 py-4">
@@ -586,13 +621,31 @@ useEffect(() => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-                          b.status
-                        )}`}
-                      >
-                        {b.status || "New"}
-                      </span>
+                      <div className="relative">
+                        <select
+                          value={b.status || "New"}
+                          onChange={(e) => handleStatusUpdate(b.id, e.target.value)}
+                          disabled={updatingStatus.has(b.id)}
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border transition-colors duration-200 ${
+                            updatingStatus.has(b.id) 
+                              ? 'bg-gray-600/20 text-gray-500 border-gray-600/30 cursor-not-allowed' 
+                              : getStatusColor(b.status) + ' hover:bg-opacity-80 cursor-pointer'
+                          }`}
+                        >
+                          <option value="New">New</option>
+                          <option value="Qualified">Qualified</option>
+                          <option value="Contacted">Contacted</option>
+                          <option value="Visited">Visited</option>
+                          <option value="Negotiation">Negotiation</option>
+                          <option value="Converted">Converted</option>
+                          <option value="Dropped">Dropped</option>
+                        </select>
+                        {updatingStatus.has(b.id) && (
+                          <div className="absolute -top-1 -right-1 w-3 h-3">
+                            <div className="animate-spin rounded-full h-3 w-3 border-b border-amber-500"></div>
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-400">
                       {new Date(b.updatedAt).toLocaleDateString()}
