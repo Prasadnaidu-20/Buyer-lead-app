@@ -171,11 +171,11 @@ export function withRateLimit(
   requestCount: number = 1
 ) {
   return function rateLimitMiddleware(
-    handler: (req: Request, ...args: any[]) => Promise<Response>
+    handler: (req: Request, ...args: unknown[]) => Promise<Response>
   ) {
     return async function rateLimitedHandler(
       req: Request,
-      ...args: any[]
+      ...args: unknown[]
     ): Promise<Response> {
       const identifier = getUserIdentifier(req);
       const result = rateLimiter.checkLimit(identifier, requestCount);

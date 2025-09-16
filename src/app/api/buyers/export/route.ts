@@ -4,8 +4,6 @@ import { prisma } from "../../../../../lib/prisma";
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const page = Math.max(1, Number(searchParams.get("page") || 1));
-    const pageSize = 1000; // Large page size for export
 
     // Extract and validate filter parameters (same as main API)
     const city = searchParams.get("city")?.trim() || undefined;
@@ -34,7 +32,7 @@ export async function GET(req: Request) {
     }
 
     // Build filters (same logic as main API)
-    const filters: any = {};
+    const filters: Record<string, string> = {};
     
     // Apply enum filters
     if (city) filters.city = city;
@@ -43,7 +41,7 @@ export async function GET(req: Request) {
     if (timeline) filters.timeline = timeline;
 
     // Handle search (same logic as main API)
-    let buyers: any[];
+    let buyers: unknown[];
 
     if (search) {
       // Use raw SQL for search since SQLite has limited string operations in Prisma
@@ -51,7 +49,7 @@ export async function GET(req: Request) {
       
       // Build WHERE conditions
       const conditions: string[] = [];
-      const params: any[] = [];
+      const params: string[] = [];
       
       // Add search condition
       conditions.push(`(
@@ -99,7 +97,7 @@ export async function GET(req: Request) {
         ${whereClause}
         ORDER BY updatedAt DESC
       `;
-      buyers = await prisma.$queryRawUnsafe(buyersQuery, ...params) as any[];
+      buyers = await prisma.$queryRawUnsafe(buyersQuery, ...params) as unknown[];
     } else {
       // No search, use regular Prisma query
       buyers = await prisma.buyer.findMany({
@@ -133,7 +131,22 @@ export async function GET(req: Request) {
     ];
 
     // Create CSV rows
-    const csvRows = buyers.map(buyer => {
+    const csvRows = (buyers as Array<{
+      fullName: string;
+      email: string | null;
+      phone: string;
+      city: string;
+      propertyType: string;
+      bhk: string | null;
+      purpose: string;
+      budgetMin: number | null;
+      budgetMax: number | null;
+      timeline: string;
+      source: string;
+      status: string;
+      notes: string | null;
+      tags: string[];
+    }>).map((buyer) => {
       return [
         escapeCSVField(buyer.fullName || ''),
         escapeCSVField(buyer.email || ''),
@@ -179,11 +192,11 @@ export async function GET(req: Request) {
       },
     });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error in CSV export:", err);
     return NextResponse.json({ 
       error: "Internal server error", 
-      message: process.env.NODE_ENV === 'development' ? err.message : undefined 
+      message: process.env.NODE_ENV === 'development' ? (err instanceof Error ? err.message : 'Unknown error') : undefined 
     }, { status: 500 });
   }
 }

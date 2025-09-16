@@ -22,6 +22,12 @@ import {
   Target,
 } from "lucide-react";
 
+interface BuyerHistoryDiff {
+  action: string;
+  changes?: Record<string, { old: unknown; new: unknown }>;
+  timestamp?: string;
+}
+
 interface Buyer {
   id: string;
   fullName: string;
@@ -42,7 +48,8 @@ interface Buyer {
   BuyerHistory: Array<{
     id: string;
     changedAt: string;
-    diff: any;
+    changedBy: string | null;
+    diff: BuyerHistoryDiff;
   }>;
 }
 
@@ -405,22 +412,25 @@ export default function BuyerDetailsPage() {
                       
                       {history.diff?.action === "UPDATED" && history.diff?.changes ? (
                         <div className="space-y-2">
-                          {Object.entries(history.diff.changes).map(([field, change]: [string, any]) => (
+                          {Object.entries(history.diff.changes).map(([field, change]: [string, unknown]) => {
+                            const changeObj = change as { old: unknown; new: unknown };
+                            return (
                             <div key={field} className="text-sm">
                               <span className="text-gray-400 capitalize">
                                 {field.replace(/([A-Z])/g, ' $1').trim()}:
                               </span>
                               <div className="flex items-center gap-2 mt-1">
                                 <span className="text-red-400 line-through bg-red-900/20 px-2 py-1 rounded text-xs">
-                                  {change.old || "—"}
+                                  {String(changeObj.old) || "—"}
                                 </span>
                                 <span className="text-gray-300">→</span>
                                 <span className="text-green-400 bg-green-900/20 px-2 py-1 rounded text-xs">
-                                  {change.new || "—"}
+                                  {String(changeObj.new) || "—"}
                                 </span>
                               </div>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       ) : (
                         <div className="text-gray-200 text-sm">

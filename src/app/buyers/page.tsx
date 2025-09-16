@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback, memo } from "react";
+import { useEffect, useState, useCallback, memo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Search,
-  Filter,
   Users,
   Eye,
   Edit3,
@@ -38,7 +37,24 @@ const BuyerRow = memo(({
   getBudgetLabel, 
   getTimelineLabel 
 }: {
-  buyer: any;
+  buyer: {
+    id: string;
+    fullName: string;
+    email?: string | null;
+    phone: string;
+    city: string;
+    propertyType: string;
+    bhk?: string | null;
+    purpose: string;
+    budgetMin?: number | null;
+    budgetMax?: number | null;
+    timeline: string;
+    source: string;
+    status: string;
+    notes?: string | null;
+    tags: string[];
+    updatedAt: string;
+  };
   updatingStatus: Set<string>;
   handleStatusUpdate: (buyerId: string, newStatus: string) => void;
   getStatusColor: (status: string) => string;
@@ -91,7 +107,7 @@ const BuyerRow = memo(({
       <div className="flex items-center gap-2 text-gray-300">
         <DollarSign className="w-4 h-4 text-gray-400" />
         <span className="text-sm">
-          {getBudgetLabel(buyer.budgetMin, buyer.budgetMax)}
+          {getBudgetLabel(buyer.budgetMin ?? null, buyer.budgetMax ?? null)}
         </span>
       </div>
     </td>
@@ -156,11 +172,28 @@ const BuyerRow = memo(({
 
 BuyerRow.displayName = 'BuyerRow';
 
-export default function BuyersPage() {
+function BuyersPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [buyers, setBuyers] = useState<any[]>([]);
+  const [buyers, setBuyers] = useState<{
+    id: string;
+    fullName: string;
+    email?: string | null;
+    phone: string;
+    city: string;
+    propertyType: string;
+    bhk?: string | null;
+    purpose: string;
+    budgetMin?: number | null;
+    budgetMax?: number | null;
+    timeline: string;
+    source: string;
+    status: string;
+    notes?: string | null;
+    tags: string[];
+    updatedAt: string;
+  }[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -172,7 +205,14 @@ export default function BuyersPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<any>(null);
+  const [importResult, setImportResult] = useState<{
+    success: boolean;
+    totalRows: number;
+    validRows: number;
+    errors: Array<{ row: number; message: string }>;
+    insertedCount: number;
+    error?: string;
+  } | null>(null);
   const [exporting, setExporting] = useState(false);
   
   // Status update state
@@ -307,6 +347,10 @@ export default function BuyersPage() {
     } catch (err) {
       setImportResult({
         success: false,
+        totalRows: 0,
+        validRows: 0,
+        errors: [],
+        insertedCount: 0,
         error: err instanceof Error ? err.message : "Import failed"
       });
     } finally {
@@ -701,7 +745,7 @@ useEffect(() => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700/50">
-                  {buyers && buyers.map((b: any) => (
+                  {buyers && buyers.map((b) => (
                     <BuyerRow
                       key={b.id}
                       buyer={b}
@@ -886,7 +930,7 @@ useEffect(() => {
                             <div className="max-h-40 overflow-y-auto">
                               <p className="font-medium mb-2">Validation Errors:</p>
                               <div className="space-y-1">
-                                {importResult.errors.slice(0, 10).map((error: any, index: number) => (
+                                {importResult.errors.slice(0, 10).map((error: { row: number; message: string }, index: number) => (
                                   <p key={index} className="text-xs">
                                     Row {error.row}: {error.message}
                                   </p>
@@ -941,5 +985,24 @@ useEffect(() => {
         )}
       </div>
     </div>
+  );
+}
+
+export default function BuyersPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 py-8 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center py-12">
+            <div className="flex items-center gap-3 text-gray-400">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-500"></div>
+              <span>Loading...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <BuyersPageContent />
+    </Suspense>
   );
 }

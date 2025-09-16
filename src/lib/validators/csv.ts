@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { buyerSchema } from "./buyer";
+import { buyerSchema } from "../../../lib/validators/buyer";
 
 // CSV Row interface
 export interface CSVRow {
@@ -22,7 +22,7 @@ export interface CSVRow {
 // CSV Row validation result
 export interface CSVValidationResult {
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
 }
 
@@ -85,9 +85,9 @@ export function transformCSVRow(row: CSVRow): CSVValidationResult {
     const validatedData = buyerSchema.parse(transformedData);
     
     return { success: true, data: validatedData };
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof z.ZodError) {
-      const firstError = err.errors[0];
+      const firstError = err.issues[0];
       return { success: false, error: `${firstError.path.join('.')}: ${firstError.message}` };
     }
     return { success: false, error: err instanceof Error ? err.message : 'Validation failed' };
