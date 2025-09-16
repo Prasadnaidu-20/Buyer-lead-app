@@ -532,7 +532,7 @@ useEffect(() => {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setShowImportModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
+              className="inline-flex cursor-pointer items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
             >
               <Upload className="w-4 h-4" />
               Import CSV
@@ -540,7 +540,7 @@ useEffect(() => {
             <button
               onClick={handleExport}
               disabled={exporting}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors duration-200"
+              className="inline-flex items-center cursor-pointer gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors duration-200"
             >
               <Download className="w-4 h-4" />
               {exporting ? "Exporting..." : "Export CSV"}
@@ -557,7 +557,7 @@ useEffect(() => {
               localStorage.removeItem("user");
               router.push("/login");
             }}
-          className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5">
+          className="inline-flex cursor-pointer items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5">
             Logout
           </button>
           </div>
@@ -591,7 +591,7 @@ useEffect(() => {
           <div className="flex items-center justify-between">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-700/50 hover:bg-gray-700/70 border border-gray-600 rounded-lg text-gray-300 transition-all duration-300"
+              className="flex items-center gap-2 px-4 py-2 cursor-pointer bg-gray-700/50 hover:bg-gray-700/70 border border-gray-600 rounded-lg text-gray-300 transition-all duration-300"
             >
               <SlidersHorizontal className="w-4 h-4" />
               Filters {showFilters ? "▲" : "▼"}
@@ -609,7 +609,7 @@ useEffect(() => {
                 <select
                   value={city}
                   onChange={(e) => handleFilterChange('city', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+                  className="w-full px-3 py-2 cursor-pointer bg-gray-700/50 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
                 >
                   <option value="">All Cities</option>
                   <option value="Chandigarh">Chandigarh</option>
@@ -628,7 +628,7 @@ useEffect(() => {
                 <select
                   value={propertyType}
                   onChange={(e) => handleFilterChange('propertyType', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+                  className="w-full px-3 py-2 cursor-pointer bg-gray-700/50 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
                 >
                   <option value="">All Types</option>
                   <option value="Apartment">Apartment</option>
@@ -647,7 +647,7 @@ useEffect(() => {
                 <select
                   value={status}
                   onChange={(e) => handleFilterChange('status', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+                  className="w-full px-3 py-2 cursor-pointer bg-gray-700/50 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
                 >
                   <option value="">All Status</option>
                   <option value="New">New</option>
@@ -668,7 +668,7 @@ useEffect(() => {
                 <select
                   value={timeline}
                   onChange={(e) => handleFilterChange('timeline', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+                  className="w-full px-3 py-2 cursor-pointer bg-gray-700/50 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
                 >
                   <option value="">All Timelines</option>
                   <option value="ZERO_TO_3M">0-3 Months</option>
@@ -701,7 +701,7 @@ useEffect(() => {
                 <div className="text-gray-400 text-sm mb-4">{error}</div>
                 <button
                   onClick={fetchBuyers}
-                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors duration-200"
+                  className="px-4 py-2 cursor-pointer bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors duration-200"
                 >
                   Try Again
                 </button>
@@ -773,7 +773,7 @@ useEffect(() => {
               </p>
               <Link
                 href="/buyers/new"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all duration-300"
+                className="inline-flex items-center gap-2 px-4 py-2 cursor-pointer bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-lg hover:from-amber-600 hover:to-orange-700 transition-all duration-300"
               >
                 <Plus className="w-4 h-4" />
                 Create First Lead
@@ -794,7 +794,7 @@ useEffect(() => {
               <button
                 onClick={() => handlePageChange(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="p-2 border border-gray-600 rounded-lg bg-gray-700/50 text-gray-400 hover:bg-gray-700/70 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                className="p-2 border cursor-pointer border-gray-600 rounded-lg bg-gray-700/50 text-gray-400 hover:bg-gray-700/70 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -810,7 +810,7 @@ useEffect(() => {
                     <button
                       key={pageNum}
                       onClick={() => handlePageChange(pageNum)}
-                      className={`px-3 py-2 border rounded-lg text-sm font-medium transition-all duration-200 ${
+                      className={`px-3 py-2 cursor-pointer border rounded-lg text-sm font-medium transition-all duration-200 ${
                         pageNum === page
                           ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white border-amber-500"
                           : "bg-gray-700/50 text-gray-400 border-gray-600 hover:bg-gray-700/70"
@@ -832,7 +832,7 @@ useEffect(() => {
               <button
                 onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
-                className="p-2 border border-gray-600 rounded-lg bg-gray-700/50 text-gray-400 hover:bg-gray-700/70 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                className="p-2 border cursor-pointer border-gray-600 rounded-lg bg-gray-700/50 text-gray-400 hover:bg-gray-700/70 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -856,7 +856,7 @@ useEffect(() => {
                       setImportFile(null);
                       setImportResult(null);
                     }}
-                    className="p-2 hover:bg-gray-700 rounded-lg transition-colors duration-200 text-gray-400 hover:text-white"
+                    className="p-2 hover:bg-gray-700 cursor-pointer rounded-lg transition-colors duration-200 text-gray-400 hover:text-white"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -956,14 +956,14 @@ useEffect(() => {
                         setImportFile(null);
                         setImportResult(null);
                       }}
-                      className="px-4 py-2 border border-gray-600 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                      className="px-4 py-2 cursor-pointer border border-gray-600 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors duration-200"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleImport}
                       disabled={!importFile || importing}
-                      className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors duration-200"
+                      className="inline-flex items-center cursor-pointer gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors duration-200"
                     >
                       {importing ? (
                         <>
