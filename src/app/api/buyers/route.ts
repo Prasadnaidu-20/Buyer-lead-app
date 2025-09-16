@@ -109,64 +109,70 @@ export async function GET(req: Request) {
     let buyers: unknown[];
 
     if (search) {
-      // Use raw SQL for search since SQLite has limited string operations in Prisma
+      // Use raw SQL for search with PostgreSQL syntax
       const searchTerm = `%${search}%`;
       
-      // Build WHERE conditions
+      // Build WHERE conditions with PostgreSQL placeholders
       const conditions: string[] = [];
-      const params: string[] = [];
+      const params: unknown[] = [];
+      let paramIndex = 1;
       
-      // Add search condition
+      // Add search condition - use different operators for different field types
       conditions.push(`(
-        fullName LIKE ? OR 
-        phone LIKE ? OR 
-        email LIKE ? OR 
-        city LIKE ? OR 
-        propertyType LIKE ? OR 
-        status LIKE ? OR 
-        source LIKE ? OR 
-        notes LIKE ?
+        "fullName" ILIKE $${paramIndex} OR 
+        phone ILIKE $${paramIndex + 1} OR 
+        email ILIKE $${paramIndex + 2} OR 
+        city::text ILIKE $${paramIndex + 3} OR 
+        "propertyType"::text ILIKE $${paramIndex + 4} OR 
+        status::text ILIKE $${paramIndex + 5} OR 
+        source::text ILIKE $${paramIndex + 6} OR 
+        notes ILIKE $${paramIndex + 7}
       )`);
       
       // Add search term 8 times (once for each field)
       for (let i = 0; i < 8; i++) {
         params.push(searchTerm);
       }
+      paramIndex += 8;
       
       // Add other filters
       if (city) {
-        conditions.push("city = ?");
+        conditions.push(`city = $${paramIndex}`);
         params.push(city);
+        paramIndex++;
       }
       if (propertyType) {
-        conditions.push("propertyType = ?");
+        conditions.push(`"propertyType" = $${paramIndex}`);
         params.push(propertyType);
+        paramIndex++;
       }
       if (status) {
-        conditions.push("status = ?");
+        conditions.push(`status = $${paramIndex}`);
         params.push(status);
+        paramIndex++;
       }
       if (timeline) {
-        conditions.push("timeline = ?");
+        conditions.push(`timeline = $${paramIndex}`);
         params.push(timeline);
+        paramIndex++;
       }
       
       const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
       
       // Get total count
-      const countQuery = `SELECT COUNT(*) as count FROM Buyer ${whereClause}`;
+      const countQuery = `SELECT COUNT(*) as count FROM "Buyer" ${whereClause}`;
       const countResult = await prisma.$queryRawUnsafe(countQuery, ...params) as unknown[];
       total = Number((countResult[0] as { count: number }).count);
       
       // Get buyers with pagination
       const buyersQuery = `
         SELECT 
-          id, fullName, email, phone, city, propertyType, bhk, purpose, 
-          budgetMin, budgetMax, timeline, source, status, notes, tags, updatedAt
-        FROM Buyer 
+          id, "fullName", email, phone, city, "propertyType", bhk, purpose, 
+          "budgetMin", "budgetMax", timeline, source, status, notes, tags, "updatedAt"
+        FROM "Buyer" 
         ${whereClause}
-        ORDER BY updatedAt DESC
-        LIMIT ? OFFSET ?
+        ORDER BY "updatedAt" DESC
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `;
       buyers = await prisma.$queryRawUnsafe(buyersQuery, ...params, pageSize, (page - 1) * pageSize) as unknown[];
     } else {
