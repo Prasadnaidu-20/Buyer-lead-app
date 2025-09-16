@@ -36,7 +36,7 @@ npm run dev
 
 ### Environment Variables
 ```env
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://username:password@localhost:5432/buyer_lead_app"
 NEXTAUTH_SECRET="your-secret-key"
 NEXTAUTH_URL="http://localhost:3000"
 NODE_ENV="development"
@@ -47,13 +47,44 @@ NODE_ENV="development"
 npx prisma studio      # View database
 npx prisma migrate dev # Create migration
 npx prisma migrate reset # Reset database
+npx prisma db push     # Push schema changes
+npx prisma generate    # Generate Prisma client
 ```
+
+### PostgreSQL Setup
+This project uses PostgreSQL for better performance and production readiness. You can set up PostgreSQL locally or use a cloud service:
+
+#### **Local PostgreSQL**
+```bash
+# Install PostgreSQL (varies by OS)
+# macOS: brew install postgresql
+# Ubuntu: sudo apt install postgresql
+# Windows: Download from postgresql.org
+
+# Create database
+createdb buyer_lead_app
+
+# Update .env
+DATABASE_URL="postgresql://username:password@localhost:5432/buyer_lead_app"
+```
+
+#### **Cloud PostgreSQL (Recommended)**
+- **Neon**: Free tier with automatic scaling
+- **Supabase**: PostgreSQL with additional features
+- **Railway**: Simple deployment
+- **Heroku Postgres**: Production-ready
+
+#### **Database Features**
+- **Advanced Search**: Case-insensitive search with `ILIKE`
+- **Enum Support**: Proper enum types for cities, property types, etc.
+- **JSON Fields**: Native JSON support for tags and history
+- **ACID Compliance**: Better data integrity and consistency
 
 ## 🏗️ Architecture
 
 ### Tech Stack
 - **Frontend**: Next.js 15 (App Router) + TypeScript + Tailwind CSS
-- **Backend**: Next.js API Routes + Prisma ORM + SQLite
+- **Backend**: Next.js API Routes + Prisma ORM + PostgreSQL
 - **Validation**: Zod (client + server)
 - **Testing**: Jest + TypeScript
 - **Auth**: Mock system (ready for real auth)
@@ -144,7 +175,7 @@ model BuyerHistory {
 
 #### **Technical Implementation**
 - ✅ **Next.js 15**: App Router with TypeScript
-- ✅ **Database**: Prisma + SQLite with migrations
+- ✅ **Database**: Prisma + PostgreSQL with migrations
 - ✅ **Validation**: Zod (client + server)
 - ✅ **Performance**: React memoization, optimized re-renders
 - ✅ **UX**: Loading states, error handling, responsive design
