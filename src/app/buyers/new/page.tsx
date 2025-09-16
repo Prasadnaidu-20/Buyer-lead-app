@@ -138,8 +138,8 @@ export default function CreateBuyerPage() {
       } else {
         setMessage(`✅ Buyer created!`);
       }
-    } catch (err: any) {
-      setMessage(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      setMessage(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 

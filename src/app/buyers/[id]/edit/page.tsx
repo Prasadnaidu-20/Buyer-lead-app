@@ -223,8 +223,8 @@ export default function EditBuyerPage() {
           router.push(`/buyers/${buyerId}`);
         }, 1500);
       }
-    } catch (err: any) {
-      setError(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      setError(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setSubmitting(false);
     }

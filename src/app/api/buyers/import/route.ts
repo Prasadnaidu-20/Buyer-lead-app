@@ -81,7 +81,7 @@ async function importCSV(req: Request) {
     // Parse CSV rows
     const csvRows: CSVRow[] = [];
     const errors: Array<{ row: number; message: string }> = [];
-    const validData: any[] = [];
+    const validData: unknown[] = [];
 
     // Process each row (skip header)
     for (let i = 1; i < lines.length; i++) {
@@ -155,9 +155,25 @@ async function importCSV(req: Request) {
       
       await prisma.$transaction(async (tx) => {
         for (const data of validData) {
+          // Parse the data through buyerSchema to ensure proper types
+          const parsedData = buyerSchema.parse(data);
+          
           const buyer = await tx.buyer.create({
             data: {
-              ...data,
+              fullName: parsedData.fullName,
+              email: parsedData.email,
+              phone: parsedData.phone,
+              city: parsedData.city,
+              propertyType: parsedData.propertyType,
+              bhk: parsedData.bhk,
+              purpose: parsedData.purpose,
+              budgetMin: parsedData.budgetMin,
+              budgetMax: parsedData.budgetMax,
+              timeline: parsedData.timeline,
+              source: parsedData.source,
+              status: parsedData.status,
+              notes: parsedData.notes,
+              tags: parsedData.tags ?? [],
               ownerId: "user-id-123", // replace with real logged-in user
             },
           });
@@ -186,19 +202,19 @@ async function importCSV(req: Request) {
         insertedCount
       } as ImportResult);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Transaction failed:", err);
       return NextResponse.json({ 
         error: "Failed to import buyers", 
-        message: process.env.NODE_ENV === 'development' ? err.message : undefined 
+        message: process.env.NODE_ENV === 'development' ? (err instanceof Error ? err.message : 'Unknown error') : undefined 
       }, { status: 500 });
     }
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error in CSV import:", err);
     return NextResponse.json({ 
       error: "Internal server error", 
-      message: process.env.NODE_ENV === 'development' ? err.message : undefined 
+      message: process.env.NODE_ENV === 'development' ? (err instanceof Error ? err.message : 'Unknown error') : undefined 
     }, { status: 500 });
   }
 }
@@ -245,7 +261,7 @@ function parseCSVLine(line: string): string[] {
 }
 
 // Helper function to transform and validate CSV row data
-function transformCSVRow(row: CSVRow): { success: boolean; data?: any; error?: string } {
+function transformCSVRow(row: CSVRow): { success: boolean; data?: unknown; error?: string } {
   try {
     // Validate required fields first
     if (!row.fullName || row.fullName.trim() === '') {
@@ -292,7 +308,7 @@ function transformCSVRow(row: CSVRow): { success: boolean; data?: any; error?: s
     const validatedData = buyerSchema.parse(transformedData);
     
     return { success: true, data: validatedData };
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof z.ZodError) {
       const firstError = err.issues?.[0];
       if (firstError) {

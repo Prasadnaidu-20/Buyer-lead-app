@@ -26,7 +26,7 @@ export default function LoginPage() {
         router.push("/buyers");
       }
     } catch (err) {
-      setError("Something went wrong");
+      setError(`Something went wrong ${err}`);
     } finally {
       setLoading(false);
     }

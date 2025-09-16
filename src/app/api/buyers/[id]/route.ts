@@ -30,17 +30,17 @@ export async function GET(
     }
 
     return NextResponse.json({ buyer });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error in GET /api/buyers/[id]:", err);
     
     // Handle specific Prisma errors
-    if (err.code === 'P2025') {
+    if (err && typeof err === 'object' && 'code' in err && err.code === 'P2025') {
       return NextResponse.json({ error: "Buyer not found" }, { status: 404 });
     }
     
     return NextResponse.json({ 
       error: "Internal server error", 
-      message: process.env.NODE_ENV === 'development' ? err.message : undefined 
+      message: process.env.NODE_ENV === 'development' ? (err instanceof Error ? err.message : 'Unknown error') : undefined 
     }, { status: 500 });
   }
 }
@@ -91,7 +91,7 @@ async function updateBuyer(
     });
 
     // Calculate field-level changes
-    const changes: Record<string, { old: any; new: any }> = {};
+    const changes: Record<string, { old: unknown; new: unknown }> = {};
     const fieldsToTrack = [
       'fullName', 'email', 'phone', 'city', 'propertyType', 'bhk', 
       'purpose', 'budgetMin', 'budgetMax', 'timeline', 'source', 
@@ -117,37 +117,40 @@ async function updateBuyer(
         data: {
           buyerId: buyerId,
           changedBy: "user-id-123", // replace with real logged-in user
-          diff: {
+          diff: JSON.parse(JSON.stringify({
             action: "UPDATED",
             changes: changes,
             timestamp: new Date().toISOString(),
-          },
+          })),
         },
       });
     }
 
     return NextResponse.json(updatedBuyer);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error in PUT /api/buyers/[id]:", err);
     
-    if (err.name === 'ZodError') {
-      return NextResponse.json({ error: "Validation error", details: err.errors }, { status: 400 });
+    if (err && typeof err === 'object' && 'name' in err && err.name === 'ZodError') {
+      return NextResponse.json({ error: "Validation error", details: 'errors' in err ? err.errors : undefined }, { status: 400 });
     }
     
     // Handle specific Prisma errors
-    if (err.code === 'P2025') {
+    if (err && typeof err === 'object' && 'code' in err && err.code === 'P2025') {
       return NextResponse.json({ error: "Buyer not found" }, { status: 404 });
     }
     
     return NextResponse.json({ 
       error: "Internal server error", 
-      message: process.env.NODE_ENV === 'development' ? err.message : undefined 
+      message: process.env.NODE_ENV === 'development' ? (err instanceof Error ? err.message : 'Unknown error') : undefined 
     }, { status: 500 });
   }
 }
 
 // Apply rate limiting to buyer updates (50 per hour)
-export const PUT = withRateLimit(rateLimiters.buyerUpdate)(updateBuyer);
+export const PUT = withRateLimit(rateLimiters.buyerUpdate)(async (req: Request, ...args: unknown[]) => {
+  const params = args[0] as { params: Promise<{ id: string }> };
+  return updateBuyer(req, params);
+});
 
 export async function DELETE(
   req: Request,
@@ -175,17 +178,17 @@ export async function DELETE(
     });
 
     return NextResponse.json({ message: "Buyer deleted successfully" });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error in DELETE /api/buyers/[id]:", err);
     
     // Handle specific Prisma errors
-    if (err.code === 'P2025') {
+    if (err && typeof err === 'object' && 'code' in err && err.code === 'P2025') {
       return NextResponse.json({ error: "Buyer not found" }, { status: 404 });
     }
     
     return NextResponse.json({ 
       error: "Internal server error", 
-      message: process.env.NODE_ENV === 'development' ? err.message : undefined 
+      message: process.env.NODE_ENV === 'development' ? (err instanceof Error ? err.message : 'Unknown error') : undefined 
     }, { status: 500 });
   }
 }

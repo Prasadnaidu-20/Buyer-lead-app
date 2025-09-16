@@ -35,25 +35,25 @@ async function createBuyer(req: Request) {
       data: {
         buyerId: buyer.id,
         changedBy: "user-id-123", // mock user for now
-        diff: {
+        diff: JSON.parse(JSON.stringify({
           action: "CREATED",
           newValues: parsed, // store form values for auditing
-        },
+        })),
       },
     });
 
     return NextResponse.json(buyer, { status: 201 });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error in POST /api/buyers:", err);
-    if (err.code === 'P2002') {
+    if (err && typeof err === 'object' && 'code' in err && err.code === 'P2002') {
       return NextResponse.json({ error: "Buyer with this phone number already exists" }, { status: 409 });
     }
-    if (err.name === 'ZodError') {
-      return NextResponse.json({ error: "Validation error", details: err.errors }, { status: 400 });
+    if (err && typeof err === 'object' && 'name' in err && err.name === 'ZodError') {
+      return NextResponse.json({ error: "Validation error", details: 'errors' in err ? err.errors : undefined }, { status: 400 });
     }
     return NextResponse.json({
       error: "Internal server error",
-      message: process.env.NODE_ENV === 'development' ? err.message : undefined
+      message: process.env.NODE_ENV === 'development' ? (err instanceof Error ? err.message : 'Unknown error') : undefined
     }, { status: 500 });
   }
 }
@@ -96,7 +96,7 @@ export async function GET(req: Request) {
     }
 
     // Build filters with proper typing
-    const filters: any = {};
+    const filters: Record<string, string> = {};
     
     // Apply enum filters
     if (city) filters.city = city;
@@ -106,7 +106,7 @@ export async function GET(req: Request) {
 
     // Execute queries with proper error handling
     let total: number;
-    let buyers: any[];
+    let buyers: unknown[];
 
     if (search) {
       // Use raw SQL for search since SQLite has limited string operations in Prisma
@@ -114,7 +114,7 @@ export async function GET(req: Request) {
       
       // Build WHERE conditions
       const conditions: string[] = [];
-      const params: any[] = [];
+      const params: string[] = [];
       
       // Add search condition
       conditions.push(`(
@@ -155,8 +155,8 @@ export async function GET(req: Request) {
       
       // Get total count
       const countQuery = `SELECT COUNT(*) as count FROM Buyer ${whereClause}`;
-      const countResult = await prisma.$queryRawUnsafe(countQuery, ...params) as any[];
-      total = Number(countResult[0].count);
+      const countResult = await prisma.$queryRawUnsafe(countQuery, ...params) as unknown[];
+      total = Number((countResult[0] as { count: number }).count);
       
       // Get buyers with pagination
       const buyersQuery = `
@@ -168,7 +168,7 @@ export async function GET(req: Request) {
         ORDER BY updatedAt DESC
         LIMIT ? OFFSET ?
       `;
-      buyers = await prisma.$queryRawUnsafe(buyersQuery, ...params, pageSize, (page - 1) * pageSize) as any[];
+      buyers = await prisma.$queryRawUnsafe(buyersQuery, ...params, pageSize, (page - 1) * pageSize) as unknown[];
     } else {
       // No search, use regular Prisma queries
       const [totalResult, buyersResult] = await Promise.all([
@@ -224,20 +224,20 @@ export async function GET(req: Request) {
         timeline: timeline || null,
       }
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error in GET /api/buyers:", err);
     
     // Handle specific Prisma errors
-    if (err.code === 'P2002') {
+    if (err && typeof err === 'object' && 'code' in err && err.code === 'P2002') {
       return NextResponse.json({ error: "Database constraint violation" }, { status: 400 });
     }
-    if (err.code === 'P2025') {
+    if (err && typeof err === 'object' && 'code' in err && err.code === 'P2025') {
       return NextResponse.json({ error: "Record not found" }, { status: 404 });
     }
     
     return NextResponse.json({ 
       error: "Internal server error", 
-      message: process.env.NODE_ENV === 'development' ? err.message : undefined 
+      message: process.env.NODE_ENV === 'development' ? (err instanceof Error ? err.message : 'Unknown error') : undefined 
     }, { status: 500 });
   }
 }

@@ -45,7 +45,7 @@ async function updateBuyerStatus(
         data: {
           buyerId: buyerId,
           changedBy: "user-id-123", // replace with real logged-in user
-          diff: {
+          diff: JSON.parse(JSON.stringify({
             action: "STATUS_UPDATED",
             changes: {
               status: {
@@ -54,26 +54,29 @@ async function updateBuyerStatus(
               },
             },
             timestamp: new Date().toISOString(),
-          },
+          })),
         },
       });
     }
 
     return NextResponse.json(updatedBuyer);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error in PATCH /api/buyers/[id]/status:", err);
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
     }
-    if (err.code === 'P2025') {
+    if (err && typeof err === 'object' && 'code' in err && err.code === 'P2025') {
       return NextResponse.json({ error: "Buyer not found" }, { status: 404 });
     }
     return NextResponse.json({
       error: "Internal server error",
-      message: process.env.NODE_ENV === 'development' ? err.message : undefined
+      message: process.env.NODE_ENV === 'development' ? (err instanceof Error ? err.message : 'Unknown error') : undefined
     }, { status: 500 });
   }
 }
 
 // Apply rate limiting to status updates (50 per hour, same as general updates)
-export const PATCH = withRateLimit(rateLimiters.buyerUpdate)(updateBuyerStatus);
+export const PATCH = withRateLimit(rateLimiters.buyerUpdate)(async (req: Request, ...args: unknown[]) => {
+  const params = args[0] as { params: Promise<{ id: string }> };
+  return updateBuyerStatus(req, params);
+});

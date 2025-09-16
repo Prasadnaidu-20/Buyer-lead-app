@@ -132,8 +132,8 @@ export function transformCSVRow(row: CSVRow): CSVValidationResult {
     
     return { success: true, data: validatedData };
   } catch (err: any) {
-    if (err instanceof z.ZodError && err.errors && err.errors.length > 0) {
-      const firstError = err.errors[0];
+    if (err instanceof z.ZodError && err.issues && err.issues.length > 0) {
+      const firstError = err.issues[0];
       return { success: false, error: `${firstError.path.join('.')}: ${firstError.message}` };
     }
     return { success: false, error: err instanceof Error ? err.message : 'Validation failed' };
